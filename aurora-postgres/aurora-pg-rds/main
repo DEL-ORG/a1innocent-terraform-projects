@@ -1,0 +1,65 @@
+provider "aws" {
+  region = var.aws_region  # Update with your desired AWS region
+}
+
+resource "aws_db_subnet_group" "pg-cluster-sn" {
+  name       = "pg-cluster-sn-subnet-group"
+  subnet_ids = ["subnet-12345678", "subnet-87654321"]  # Update with your subnet IDs
+}
+
+resource "aws_security_group" "pg-cluster-sg" {
+  name        = "pg-cluster-sg-security-group"
+  description = "pg-cluster-sg security group for Aurora DB cluster"
+
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  # Update with your desired CIDR range
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_db_parameter_group" "pg-cluster-pg" {
+  name        = "pg-cluster-pg-parameter-group"
+  family      = "aurora-postgresql13"  # Update with the desired PostgreSQL version
+  description = "Parameter group for Aurora PostgreSQL"
+}
+
+resource "aws_rds_cluster" "postgres-cluster" {
+  cluster_identifier      = lookup(var.aws_rds_cluster, "cluster_identifier")
+  engine                  = lookup(var.aws_rds_cluster, "engine")
+  engine_version          = lookup(var.aws_rds_cluster, "engine_version")  # Update with your desired PostgreSQL version
+  master_username         = lookup(var.aws_rds_cluster, "master_username")
+  master_password         = lookup(var.aws_rds_cluster, "master_password")  # Replace with your desired password
+  db_subnet_group_name    = aws_db_subnet_group.pg-cluster-pg.name
+  vpc_security_group_ids  = [aws_security_group.pg-cluster-sg.id]
+  aws_db_parameter_group_name = aws_db_parameter_group.pg-cluster-pg.name
+  skip_final_snapshot     = lookup(var.aws_rds_cluster, "skip_final_snapshot")  # Set to true if you don't want a final snapshot on deletion
+
+  scaling_configuration {
+    auto_pause = true
+    min_capacity = 1
+    max_capacity = 2
+    seconds_until_auto_pause = 300
+  }
+
+  tags =  merge(var.tags, {
+    Name = format("%s-%s-cluster", var.tags[teams], var.tags[ptoject])
+  })
+}
+
+resource "aws_rds_cluster_instance" "pg-cluster_instances" {
+  count              = 2
+  identifier         = "pg-cluster-instance-${count.index}"
+  cluster_identifier = lookup(var.aws_rds_cluster, "cluster_identifier").id
+  instance_class     = var.instance_class
+  engine             = lookup(var.aws_rds_cluster, "engine")
+  engine_version     = lookup(var.aws_rds_cluster, "engine_version")
+}
