@@ -1,0 +1,12 @@
+# templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "shop-web.fullname" . }}
+spec:
+  maxUnavailable: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "shop-web.fullname" . }}
+
+

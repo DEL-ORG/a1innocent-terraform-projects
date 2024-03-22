@@ -1,0 +1,160 @@
+NAME: shop-product
+LAST DEPLOYED: Sat Jan 20 03:39:01 2024
+NAMESPACE: a1innocent
+STATUS: pending-install
+REVISION: 1
+HOOKS:
+---
+# Source: shop-product/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "shop-product-test-connection"
+  labels:
+    helm.sh/chart: shop-product-0.1.0
+    app.kubernetes.io/name: shop-product
+    app.kubernetes.io/instance: shop-product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['shop-product:8091']
+  restartPolicy: Never
+MANIFEST:
+---
+# Source: shop-product/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: shop-product
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: shop-productr
+---
+# Source: shop-product/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shop-product
+  labels:
+    helm.sh/chart: shop-product-0.1.0
+    app.kubernetes.io/name: shop-product
+    app.kubernetes.io/instance: shop-product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+automountServiceAccountToken: true
+---
+# Source: shop-product/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: espresso-shop-product-catalog-svc
+  labels:
+    helm.sh/chart: shop-product-0.1.0
+    app.kubernetes.io/name: shop-product
+    app.kubernetes.io/instance: shop-product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: NodePort
+  ports:
+    - port: 8091
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: shop-product
+    app.kubernetes.io/instance: shop-product
+    version: v1
+---
+# Source: shop-product/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-product
+  labels:
+    helm.sh/chart: shop-product-0.1.0
+    app.kubernetes.io/name: shop-product
+    app.kubernetes.io/instance: shop-product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shop-product
+      app.kubernetes.io/instance: shop-product
+      version: v1
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: shop-product-0.1.0
+        app.kubernetes.io/name: shop-product
+        app.kubernetes.io/instance: shop-product
+        version: v1
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: shop-product
+      securityContext:
+        {}
+      containers:
+        - name: shop-product
+          securityContext:
+            {}
+          image: "devopseasylearning/a1innocent-espresso:product"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP    
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+---
+# Source: shop-product/templates/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: shop-product
+  labels:
+    helm.sh/chart: shop-product-0.1.0
+    app.kubernetes.io/name: shop-product
+    app.kubernetes.io/instance: shop-product
+    version: v1
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: shop-product
+  minReplicas: 1
+  maxReplicas: 100
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+NOTES:
+1. Get the application URL by running these commands:
+  export NODE_PORT=$(kubectl get --namespace a1innocent -o jsonpath="{.spec.ports[0].nodePort}" services shop-product)
+  export NODE_IP=$(kubectl get nodes --namespace a1innocent -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
