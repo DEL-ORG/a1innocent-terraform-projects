@@ -13,6 +13,8 @@ variable "tags" {
     "project"        = "S3 Backend"
     "create_by"      = "Terraform"
     "cloud_provider" = "aws"
+    "k8s.io/cluster-autoscaler/${var.control_plane_name}" = "${var.shared_owned}"
+    "k8s.io/cluster-autoscaler/enabled"                   = "${var.enable_cluster_autoscaler}"
   }
 
 }
